@@ -1,67 +1,80 @@
 import tkinter as tk
 import subprocess
 import time
+import os
 
-# Function to read an array from the file
 def read_array_from_file(filename):
+    if not os.path.exists(filename):
+        return []
     with open(filename, 'r') as file:
         return list(map(int, file.readline().split()))
 
-# Function to read timing information from the file
-def read_timing_from_file(filename):
-    with open(filename, 'r') as file:
-        lines = file.readlines()
-    return lines
-
-# Function to update the canvas with the array
 def update_canvas(canvas, array):
-    canvas.delete("all")  # Clear previous drawings
-    bar_width = 800 // len(array)  # Width of each bar
+    canvas.delete("all")
+    bar_width = 250 // max(len(array), 1)
     for i, value in enumerate(array):
-        x0, y0 = i * bar_width, 400 - value * 10  # Y-coordinate for the height
-        x1, y1 = (i + 1) * bar_width, 400
-        # Draw each bar (rectangle)
-        canvas.create_rectangle(x0, y0, x1, y1, fill="yellow", outline="black")
-        # Draw the number inside the block
-        text_x = (x0 + x1) / 2  # X position of text (center of the block)
-        text_y = (y0 + y1) / 2  # Y position of text (center of the block)
-        canvas.create_text(text_x, text_y, text=str(value), fill="black", font=('Helvetica', 10, 'bold'))  # Add text to the block
-    canvas.update()  # Update the canvas to reflect changes
-    time.sleep(0.5)  # Delay to create animation effect
+        x0, y0 = i * bar_width, 280 - value * 10
+        x1, y1 = (i + 1) * bar_width, 280
+        canvas.create_rectangle(x0, y0, x1, y1, fill="blue", outline="black")
+        canvas.create_text((x0 + x1) / 2, y0 + 15, text=str(value), fill="white", font=('Arial', 8, 'bold'))
+    canvas.update()
 
-# Function to run the C program and visualize sorting step by step
-def visualize_sorting():
-    subprocess.run(["./a.out"])  # Run the compiled C program
+def visualize_sorting(sort_type):
+    # Use subprocess.Popen to capture stdout in real-time
+    process = subprocess.Popen(["./sort"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    
+    if sort_type == "quick":
+       canvas = canvas_qs
+    elif sort_type == "merge":
+        canvas = canvas_ms
+    elif sort_type == "heap":
+        canvas = canvas_hs
 
-    # Read the steps and visualize each step
-    with open("step_output.txt", "r") as file:
-        for line in file:
-            array = list(map(int, line.split()))  # Convert string of numbers to an array
-            update_canvas(canvas, array)  # Update the canvas with the array state
+    while True:
+        line = process.stdout.readline().strip()
+        if line == '' and process.poll() is not None:
+            break
+        if line:
+            try:
+                arr = list(map(int, line.split()))
+                update_canvas(canvas, arr)
+                root.update() # Force GUI to update
+                time.sleep(0.1) # Adjust speed as needed
+            except ValueError:
+                print(f"Skipping invalid line: {line}")
+                
+    # After sorting, update timing label
+    timing_lines = open("timing_output.txt").read() if os.path.exists("timing_output.txt") else "Timing data not available."
+    timing_label.config(text=timing_lines)
 
-    # Finally, read and show the sorted array
-    sorted_array = read_array_from_file("sorted_output.txt")
-    update_canvas(canvas, sorted_array)  # Show the final sorted array
-
-    # Read timing information
-    timing_lines = read_timing_from_file("timing_output.txt")
-    timing_label.config(text='\n'.join(timing_lines))  # Update the label with the timing info
-
-# Create the main window
 root = tk.Tk()
-root.title("Sorting Visualization")
+root.title("Sorting Algorithm Visualization")
 
-# Create canvas for drawing the bars
-canvas = tk.Canvas(root, width=800, height=400, bg='black')
-canvas.pack()
+frame = tk.Frame(root)
+frame.pack()
 
-# Add button to start sorting
-btn_sort = tk.Button(root, text="Start Sorting", command=visualize_sorting)
-btn_sort.pack()
+canvas_qs = tk.Canvas(frame, width=250, height=300, bg='white')
+canvas_qs.grid(row=0, column=0)
+canvas_qs.create_text(125, 20, text="Quick Sort", font=('Arial', 14, 'bold'))
 
-# Add label to display the timing information
-timing_label = tk.Label(root, text="Sorting times will appear here.", fg="white", bg="black")
+canvas_ms = tk.Canvas(frame, width=250, height=300, bg='white')
+canvas_ms.grid(row=0, column=1)
+canvas_ms.create_text(125, 20, text="Merge Sort", font=('Arial', 14, 'bold'))
+
+canvas_hs = tk.Canvas(frame, width=250, height=300, bg='white')
+canvas_hs.grid(row=0, column=2)
+canvas_hs.create_text(125, 20, text="Heap Sort", font=('Arial', 14, 'bold'))
+
+btn_sort_qs = tk.Button(root, text="Start Quick Sort", command=lambda: visualize_sorting("quick"))
+btn_sort_qs.pack()
+
+btn_sort_ms = tk.Button(root, text="Start Merge Sort", command=lambda: visualize_sorting("merge"))
+btn_sort_ms.pack()
+
+btn_sort_hs = tk.Button(root, text="Start Heap Sort", command=lambda: visualize_sorting("heap"))
+btn_sort_hs.pack()
+
+timing_label = tk.Label(root, text="Sorting times will appear here.", fg="black")
 timing_label.pack()
 
-# Start the Tkinter event loop
 root.mainloop()
