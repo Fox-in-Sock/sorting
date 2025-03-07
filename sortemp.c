@@ -94,10 +94,13 @@ int main() {
     int arr[] = {10, 3, 8, 15, 6, 12, 2, 18, 7};
     int n = sizeof(arr) / sizeof(arr[0]);
     int arr_qs[n], arr_ms[n], arr_hs[n];
+    
+    for (int i = 0; i < n; i++) {
+    arr_qs[i] = arr[i];
+    arr_ms[i] = arr[i];
+    arr_hs[i] = arr[i];
+    }
 
-    memcpy(arr_qs, arr, sizeof(arr));
-    memcpy(arr_ms, arr, sizeof(arr));
-    memcpy(arr_hs, arr, sizeof(arr));
 
     quickSort(arr_qs, 0, n - 1);
     mergeSort(arr_ms, 0, n - 1);
