@@ -12,39 +12,39 @@ def read_array_from_file(filename):
 def update_canvas(canvas, array):
     canvas.delete("all")
     bar_width = 250 // max(len(array), 1)
+    
     for i, value in enumerate(array):
         x0, y0 = i * bar_width, 280 - value * 10
         x1, y1 = (i + 1) * bar_width, 280
         canvas.create_rectangle(x0, y0, x1, y1, fill="yellow", outline="black")
         canvas.create_text((x0 + x1) / 2, y0 + 15, text=str(value), fill="black", font=('Arial', 8, 'bold'))
-    canvas.update()
+    
+    canvas.update()  # Ensure immediate redraw
 
 def visualize_sorting(sort_type):
-    # Use subprocess.Popen to capture stdout in real-time
-    process = subprocess.Popen(["./sofin"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    
+    canvas = None  # Define before assignment to avoid reference issues
+
     if sort_type == "quick":
-       canvas = canvas_qs
+        subprocess.run(["./sofin", "quick"])  # Modify C program to accept sort type as an argument
+        filename = "quic.txt"
+        canvas = canvas_qs
     elif sort_type == "merge":
+        subprocess.run(["./sofin", "merge"])
+        filename = "merg.txt"
         canvas = canvas_ms
     elif sort_type == "heap":
+        subprocess.run(["./sofin", "heap"])
+        filename = "hea.txt"
         canvas = canvas_hs
 
-    while True:
-        line = process.stdout.readline().strip()
-        if line == '' and process.poll() is not None:
-            break
-        if line:
-            try:
-                arr = list(map(int, line.split()))
-                update_canvas(canvas, arr)
-                root.update() # Force GUI to update
-                time.sleep(1) # Adjust speed as needed
-            except ValueError:
-                print(f"Skipping invalid line: {line}")
-                
-    # After sorting, clear the timing label since it's no longer used
-    timing_label.config(text="Sorting completed.")
+    # Read sorted array from file
+    sorted_array = read_array_from_file(filename)
+    
+    if sorted_array:
+        update_canvas(canvas, sorted_array)
+        timing_label.config(text=f"{sort_type.capitalize()} Sort Completed!")
+    else:
+        timing_label.config(text=f"Error: No data found for {sort_type} sort!")
 
 root = tk.Tk()
 root.title("Sorting Algorithm Visualization")
