@@ -1,11 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+//swapping is donee in these algorithms
 void swap(int *a, int *b, int arr[], int n)
 {
     int temp = *a;
     *a = *b;
-    *b = temp;
+    *b = temp;//pointrs for original array
 
     // Print array state after each swap
     for (int i = 0; i < n; i++)
@@ -16,21 +17,21 @@ void swap(int *a, int *b, int arr[], int n)
     fflush(stdout); // Ensure output is immediately printed
 }
 
-// Modified Quick Sort
+// pivot for dividing array to 2 parets
 int partition(int arr[], int low, int high, int n)
 {
-    int pivot = arr[high];
-    int i = low - 1;
+    int pivot = arr[high];//chooses last
+    int i = low - 1;//small nos goes to left of pivot no and larger to right
     for (int j = low; j < high; j++)
     {
-        if (arr[j] < pivot)
+        if (arr[j] < pivot)//for arr j is small move to left by swap
         {
             i++;
             swap(&arr[i], &arr[j], arr, n);
         }
     }
-    swap(&arr[i + 1], &arr[high], arr, n);
-    return i + 1;
+    swap(&arr[i + 1], &arr[high], arr, n);//pivot places in position
+    return i + 1;//return indx
 }
 
 void quickSort(int arr[], int low, int high, int n)
@@ -38,8 +39,8 @@ void quickSort(int arr[], int low, int high, int n)
     if (low < high)
     {
         int pi = partition(arr, low, high, n);
-        quickSort(arr, low, pi - 1, n);
-        quickSort(arr, pi + 1, high, n);
+        quickSort(arr, low, pi - 1, n);//sprt left
+        quickSort(arr, pi + 1, high, n);//sort right
     }
 }
 
