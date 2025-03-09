@@ -2,11 +2,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define MAX_PATIENTS 100
+#define MAX_NAME_LENGTH 50
+#define MAX_PROBLEM_LENGTH 100
+
 typedef struct
 {
-    char name[50];
+    char name[MAX_NAME_LENGTH];
     int estimated_time;
-    char problem[100];
+    char problem[MAX_PROBLEM_LENGTH];
 } Patient;
 
 // Function to swap two elements
@@ -17,25 +21,26 @@ void swap(Patient *a, Patient *b)
     *b = temp;
 }
 
-// Partition function
+// Partition function for quicksort to sort by estimated time
 int partition(Patient arr[], int low, int high)
 {
-    int pivot = arr[high].estimated_time;
-    int i = (low - 1);
+    Patient pivot = arr[high];
+    int i = low - 1;
 
-    for (int j = low; j <= high - 1; j++)
+    // Compare estimated_time instead of name
+    for (int j = low; j < high; j++)
     {
-        if (arr[j].estimated_time < pivot)
+        if (arr[j].estimated_time < pivot.estimated_time) // Compare times instead of names
         {
             i++;
             swap(&arr[i], &arr[j]);
         }
     }
     swap(&arr[i + 1], &arr[high]);
-    return (i + 1);
+    return i + 1;
 }
 
-// Quicksort function
+// Quicksort function to sort patients by estimated time
 void quicksort(Patient arr[], int low, int high)
 {
     if (low < high)
@@ -46,40 +51,35 @@ void quicksort(Patient arr[], int low, int high)
     }
 }
 
-// Print the patient list
-void printPatients(Patient arr[], int size)
+// Binary search function to find a patient by name
+int binarySearch(Patient arr[], int size, const char *name)
 {
-    for (int i = 0; i < size; i++)
-    {
-        printf("%s: %d minutes, Problem: %s\n", arr[i].name, arr[i].estimated_time, arr[i].problem);
-    }
-}
+    int low = 0;
+    int high = size - 1;
 
-// Read patients from a file
-int readPatientsFromFile(const char *filename, Patient patients[], int max_size)
-{
-    FILE *file = fopen(filename, "r");
-    if (file == NULL)
+    while (low <= high)
     {
-        printf("Could not open file %s\n", filename);
-        return 0;
-    }
+        int mid = low + (high - low) / 2;
 
-    int count = 0;
-    while (fscanf(file, "%[^,],%d,%[^\n]\n", patients[count].name, &patients[count].estimated_time, patients[count].problem) != EOF)
-    {
-        count++;
-        if (count >= max_size)
+        int cmp = strcmp(arr[mid].name, name);
+        if (cmp == 0)
         {
-            break;
+            return mid; // Found the patient
+        }
+        else if (cmp < 0)
+        {
+            low = mid + 1;
+        }
+        else
+        {
+            high = mid - 1;
         }
     }
 
-    fclose(file);
-    return count;
+    return -1; // Patient not found
 }
 
-// Write sorted patients to a file
+// Write patients to file
 void writePatientsToFile(const char *filename, Patient patients[], int size)
 {
     FILE *file = fopen(filename, "w");
@@ -100,15 +100,33 @@ void writePatientsToFile(const char *filename, Patient patients[], int size)
 // Add new patient to the list
 void addPatient(Patient patients[], int *size)
 {
+    if (*size >= MAX_PATIENTS)
+    {
+        printf("Maximum number of patients reached.\n");
+        return;
+    }
+
     printf("Enter patient name: ");
-    scanf("%s", patients[*size].name);
+    scanf("%49s", patients[*size].name);
+    while (getchar() != '\n')
+        ; // Clear input buffer
+
     printf("Enter estimated time (in minutes): ");
-    scanf("%d", &patients[*size].estimated_time);
+    while (scanf("%d", &patients[*size].estimated_time) != 1)
+    {
+        printf("Invalid input. Please enter a numerical value for estimated time: ");
+        while (getchar() != '\n')
+            ; // Clear input buffer
+    }
+    while (getchar() != '\n')
+        ; // Clear input buffer
 
     printf("Enter the type of problem: ");
-    scanf(" %[^\n]", patients[*size].problem);
+    scanf(" %99[^\n]", patients[*size].problem);
 
     (*size)++;
+    quicksort(patients, 0, *size - 1);                    // Sort after adding each patient
+    writePatientsToFile("patients.txt", patients, *size); // Update patients.txt
 }
 
 // Delete patient from the list
@@ -120,42 +138,46 @@ void deletePatient(Patient patients[], int *size)
         return;
     }
 
-    char name[50];
+    char name[MAX_NAME_LENGTH];
     printf("Enter the name of the patient to delete: ");
-    scanf("%s", name);
+    scanf("%49s", name);
+    while (getchar() != '\n')
+        ; // Clear input buffer
 
-    int found = 0;
-    for (int i = 0; i < *size; i++)
+    int found = binarySearch(patients, *size, name);
+    if (found != -1)
     {
-        if (strcmp(patients[i].name, name) == 0)
+        for (int i = found; i < *size - 1; i++)
         {
-            for (int j = i; j < *size - 1; j++)
-            {
-                patients[j] = patients[j + 1];
-            }
-            (*size)--;
-            found = 1;
-            break;
+            patients[i] = patients[i + 1];
         }
-    }
-
-    if (!found)
-    {
-        printf("Patient not found.\n");
+        (*size)--;
+        writePatientsToFile("patients.txt", patients, *size); // Update patients.txt
+        printf("Patient %s deleted.\n", name);
     }
     else
     {
-        printf("Patient %s deleted.\n", name);
+        printf("Patient not found.\n");
     }
 }
 
 int main()
 {
-    const char *input_filename = "patients.txt";
-    const char *output_filename = "sorted_patients.txt";
-    Patient patients[100];
+    Patient patients[MAX_PATIENTS];
+    int size = 0;
 
-    int n = readPatientsFromFile(input_filename, patients, 100);
+    // Read initial patients from file
+    FILE *file = fopen("patients.txt", "r");
+    if (file != NULL)
+    {
+        while (size < MAX_PATIENTS && fscanf(file, " %49[^,],%d, %99[^\n]", patients[size].name, &patients[size].estimated_time, patients[size].problem) == 3)
+        {
+            printf("Read patient: %s, %d minutes, Problem: %s\n", patients[size].name, patients[size].estimated_time, patients[size].problem);
+            size++;
+        }
+        fclose(file);
+        quicksort(patients, 0, size - 1); // Sort initial patients by estimated time
+    }
 
     int choice;
     do
@@ -163,24 +185,27 @@ int main()
         printf("Menu:\n");
         printf("1. Add patient\n");
         printf("2. Delete patient\n");
-        printf("3. Display sorted patient list\n");
+        printf("3. Display patient list\n");
         printf("4. Exit\n");
         printf("Enter your choice: ");
         scanf("%d", &choice);
+        while (getchar() != '\n')
+            ; // Clear input buffer
 
         switch (choice)
         {
         case 1:
-            addPatient(patients, &n);
+            addPatient(patients, &size);
             break;
         case 2:
-            deletePatient(patients, &n);
+            deletePatient(patients, &size);
             break;
         case 3:
-            quicksort(patients, 0, n - 1);
-            printf("Sorted patients based on estimated time:\n");
-            printPatients(patients, n);
-            writePatientsToFile(output_filename, patients, n);
+            printf("Patient list:\n");
+            for (int i = 0; i < size; i++)
+            {
+                printf("%s: %d minutes, Problem: %s\n", patients[i].name, patients[i].estimated_time, patients[i].problem);
+            }
             break;
         case 4:
             printf("Exiting the program.\n");
