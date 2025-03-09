@@ -106,11 +106,17 @@ void addPatient(Patient patients[], int *size)
         return;
     }
 
-    printf("Enter patient name: ");
-    scanf("%49s", patients[*size].name);
+    // Clear the input buffer
     while (getchar() != '\n')
-        ; // Clear input buffer
+        ;
 
+    // Read patient name using fgets for spaces
+    printf("Enter patient name: ");
+    fgets(patients[*size].name, MAX_NAME_LENGTH, stdin);
+    // Remove the newline character if present
+    patients[*size].name[strcspn(patients[*size].name, "\n")] = 0;
+
+    // Read estimated time
     printf("Enter estimated time (in minutes): ");
     while (scanf("%d", &patients[*size].estimated_time) != 1)
     {
@@ -121,8 +127,10 @@ void addPatient(Patient patients[], int *size)
     while (getchar() != '\n')
         ; // Clear input buffer
 
+    // Read the problem description using fgets
     printf("Enter the type of problem: ");
-    scanf(" %99[^\n]", patients[*size].problem);
+    fgets(patients[*size].problem, MAX_PROBLEM_LENGTH, stdin);
+    patients[*size].problem[strcspn(patients[*size].problem, "\n")] = 0; // Remove newline
 
     (*size)++;
     quicksort(patients, 0, *size - 1);                    // Sort after adding each patient
@@ -140,9 +148,8 @@ void deletePatient(Patient patients[], int *size)
 
     char name[MAX_NAME_LENGTH];
     printf("Enter the name of the patient to delete: ");
-    scanf("%49s", name);
-    while (getchar() != '\n')
-        ; // Clear input buffer
+    fgets(name, MAX_NAME_LENGTH, stdin);
+    name[strcspn(name, "\n")] = 0; // Remove newline
 
     int found = binarySearch(patients, *size, name);
     if (found != -1)
